@@ -1,0 +1,62 @@
+/**
+ * Stage Navigation Styles
+ */
+
+.stage-nav {
+    display: flex;
+    gap: 4px;
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    align-items: center;
+}
+
+.stage-button {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: #aaaaaa;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.stage-button:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    transform: translateY(-1px);
+}
+
+.stage-button.active {
+    background: linear-gradient(135deg, #4a9eff 0%, #357abd 100%);
+    color: #ffffff;
+    border-color: #4a9eff;
+    box-shadow: 0 4px 12px rgba(74, 158, 255, 0.3);
+}
+
+.stage-icon {
+    font-size: 16px;
+    line-height: 1;
+}
+
+.stage-label {
+    font-size: 13px;
+    line-height: 1;
+}
+
+/* Responsive - hide labels on small screens */
+@media (max-width: 800px) {
+    .stage-label {
+        display: none;
+    }
+
+    .stage-button {
+        padding: 8px 12px;
+    }
+}

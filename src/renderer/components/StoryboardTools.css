@@ -1,0 +1,104 @@
+/**
+ * Storyboard Tools Styles
+ */
+
+.storyboard-tools {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, rgba(26, 26, 26, 0.95) 0%, rgba(40, 40, 40, 0.95) 100%);
+    border: 1px solid rgba(255, 193, 7, 0.4);
+    border-left: 4px solid #ffc107;
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(10px);
+    z-index: 1000;
+    min-width: 280px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.storyboard-tools.empty {
+    align-items: center;
+    text-align: center;
+}
+
+.mode-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: rgba(255, 193, 7, 0.15);
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #ffc107;
+}
+
+.mode-indicator .icon {
+    font-size: 16px;
+}
+
+.mode-indicator .label {
+    flex: 1;
+}
+
+.shot-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+}
+
+.shot-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.shot-frames {
+    font-size: 12px;
+    color: #aaaaaa;
+}
+
+.convert-button {
+    padding: 10px 16px;
+    background: linear-gradient(135deg, #4a9eff 0%, #357abd 100%);
+    border: 1px solid #4a9eff;
+    border-radius: 6px;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.convert-button:hover {
+    background: linear-gradient(135deg, #5aa8ff 0%, #4589cd 100%);
+    box-shadow: 0 4px 12px rgba(74, 158, 255, 0.4);
+    transform: translateY(-1px);
+}
+
+.convert-button:active {
+    transform: translateY(0);
+}
+
+.help-text {
+    font-size: 11px;
+    color: #888888;
+    line-height: 1.4;
+    text-align: center;
+    font-style: italic;
+}
+
+.empty-message {
+    color: #888888;
+    font-size: 13px;
+    font-style: italic;
+    margin-top: 4px;
+}

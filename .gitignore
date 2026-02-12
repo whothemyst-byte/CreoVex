@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.vscode/
+*.log
+.DS_Store
+engine/target/
+engine/pkg/
+src/data/bindings/engine/

@@ -1,0 +1,26 @@
+/**
+ * Drawing Canvas Styling
+ * Canvas presentation with studio-grade aesthetics
+ */
+
+.drawing-canvas {
+    width: 100%;
+    height: 100%;
+    cursor: crosshair;
+    background: var(--bg-canvas-outside);
+    display: block;
+    box-shadow: var(--shadow-canvas);
+    border-radius: var(--radius-sm);
+}
+
+.drawing-canvas:active {
+    cursor: crosshair;
+}
+
+/* Canvas appears to float in the center */
+/* White canvas area is drawn programmatically in DrawingCanvas.tsx */
+
+/* TODO: Canvas zoom indicator overlay */
+/* TODO: Grid overlay toggle */
+/* TODO: Safe area guides */
+/* TODO: Camera frame indicator */

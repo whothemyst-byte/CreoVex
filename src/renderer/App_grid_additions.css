@@ -1,0 +1,94 @@
+/* ====================
+   GRID AREA ASSIGNMENTS
+   ==================== */
+
+.app-header {
+    grid-area: header;
+}
+
+.tool-rail {
+    grid-area: tools;
+    background: var(--bg-secondary);
+    border-right: 1px solid var(--border-soft);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--spacing-lg) var(--spacing-sm);
+    gap: var(--spacing-sm);
+}
+
+.narrative-sidebar {
+    grid-area: sidebar;
+    background: var(--bg-secondary);
+    border-right: 1px solid var(--border-soft);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.sidebar-section {
+    flex: 1;
+    min-height: 0;
+    border-bottom: 1px solid var(--border-soft);
+}
+
+.sidebar-section:last-child {
+    border-bottom: none;
+}
+
+/* ====================
+   CANVAS STAGE (Hero)
+   ==================== */
+
+.canvas-stage {
+    grid-area: canvas;
+    position: relative;
+    background: var(--bg-canvas-surround);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    padding: var(--spacing-xl);
+}
+
+.canvas-stage>canvas,
+.canvas-stage>* {
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    border-radius: 2px;
+}
+
+/* ====================
+   TIMELINE (Integrated)
+   ==================== */
+
+.timeline-container,
+.timeline-stage {
+    grid-area: timeline;
+    background: linear-gradient(to bottom, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+    border-top: 1px solid var(--border-medium);
+    position: relative;
+    overflow: hidden;
+}
+
+/* ====================
+   FILE CONTROLS
+   ==================== */
+
+.save-status {
+    font-size: 12px;
+    color: var(--text-secondary);
+    padding: 4px 12px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-soft);
+}
+
+.inspector-panel {
+    grid-area: inspector;
+    background: var(--bg-secondary);
+    border-left: 1px solid var(--border-soft);
+    display: none;
+    flex-direction: column;
+    padding: var(--spacing-lg);
+    overflow-y: auto;
+}

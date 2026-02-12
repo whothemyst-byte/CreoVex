@@ -1,0 +1,446 @@
+/**
+ * Shot Panel - Refined Hierarchy
+ */
+
+.shot-panel {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-bottom: 1px solid var(--border-soft);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.panel-header h3 {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+}
+
+.add-shot-form {
+    padding: var(--spacing-md) var(--spacing-lg);
+    background: rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid var(--border-soft);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.form-row {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+.shot-input {
+    flex: 1;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border-medium);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    transition: all var(--transition);
+}
+
+.shot-input:focus {
+    border-color: var(--accent-primary);
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.shot-input::placeholder {
+    color: var(--text-muted);
+}
+
+.add-shot-button,
+.cancel-add-button {
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition);
+    font-family: inherit;
+    border: 1px solid;
+}
+
+.add-shot-button {
+    background: rgba(91, 159, 237, 0.2);
+    border-color: rgba(91, 159, 237, 0.3);
+    color: var(--accent-primary);
+}
+
+.add-shot-button:hover {
+    background: rgba(91, 159, 237, 0.3);
+    border-color: var(--accent-primary);
+}
+
+.cancel-add-button {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: var(--border-soft);
+    color: var(--text-secondary);
+}
+
+.cancel-add-button:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-primary);
+}
+
+.shot-list {
+    list-style: none;
+    margin: 0;
+    padding: var(--spacing-sm);
+    overflow-y: auto;
+    flex: 1;
+}
+
+.shot-item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    padding: 10px 12px;
+    margin-bottom: 4px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.shot-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: var(--border-medium);
+}
+
+.shot-item.selected {
+    background: rgba(91, 159, 237, 0.15);
+    border-color: var(--accent-primary);
+}
+
+.shot-item.empty {
+    cursor: default;
+    background: transparent;
+    border-style: dashed;
+    border-color: var(--border-soft);
+    align-items: center;
+    text-align: center;
+    padding: var(--spacing-xl);
+}
+
+.shot-item.empty:hover {
+    background: transparent;
+    border-color: var(--border-soft);
+}
+
+.empty-message {
+    color: var(--text-muted);
+    font-size: 13px;
+    font-style: italic;
+}
+
+.empty-message::before {
+    content: '🎥';
+    display: block;
+    font-size: 32px;
+    margin-bottom: var(--spacing-sm);
+    opacity: 0.5;
+}
+
+.shot-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.shot-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.shot-actions {
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity var(--transition);
+}
+
+.shot-item:hover .shot-actions {
+    opacity: 1;
+}
+
+.delete-shot-button {
+    padding: 4px 8px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all var(--transition);
+    font-family: inherit;
+}
+
+.delete-shot-button:hover {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: #EF4444;
+    color: #EF4444;
+}
+
+.shot-details {
+    display: flex;
+    gap: var(--spacing-md);
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.shot-status {
+    display: flex;
+    gap: var(--spacing-xs);
+    align-items: center;
+}
+
+.status-badge {
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-badge.has-storyboard {
+    background: rgba(91, 159, 237, 0.2);
+    color: var(--accent-primary);
+}
+
+.status-badge.has-animation {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10B981;
+}
+
+
+.shot-panel.empty {
+    justify-content: center;
+    align-items: center;
+}
+
+.shot-list {
+    list-style: none;
+    margin: 0;
+    padding: 8px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.shot-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    margin-bottom: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.shot-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.shot-item.selected {
+    background: linear-gradient(135deg, rgba(74, 158, 255, 0.2) 0%, rgba(53, 122, 189, 0.2) 100%);
+    border-color: #4a9eff;
+    box-shadow: 0 0 8px rgba(74, 158, 255, 0.3);
+}
+
+.shot-item.empty-state {
+    cursor: default;
+    background: transparent;
+    border-style: dashed;
+    border-color: rgba(255, 255, 255, 0.2);
+    align-items: center;
+}
+
+.shot-item.empty-state:hover {
+    background: transparent;
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.shot-item.adding {
+    background: rgba(74, 158, 255, 0.1);
+    border-color: #4a9eff;
+    cursor: default;
+}
+
+.shot-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.shot-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.shot-status {
+    display: flex;
+    gap: 4px;
+}
+
+.status-badge {
+    font-size: 14px;
+    opacity: 0.8;
+}
+
+.shot-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 12px;
+    color: #888888;
+}
+
+.shot-frames {
+    color: #cccccc;
+}
+
+.shot-purpose {
+    color: #4a9eff;
+    font-style: italic;
+}
+
+.shot-actions {
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.shot-item:hover .shot-actions {
+    opacity: 1;
+}
+
+.shot-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+}
+
+.shot-input {
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+    color: #ffffff;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+}
+
+.shot-input:focus {
+    border-color: #4a9eff;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.duration-input {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+}
+
+.duration-input label {
+    color: #aaaaaa;
+}
+
+.shot-duration {
+    width: 80px;
+    padding: 6px 10px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+    color: #ffffff;
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+}
+
+.shot-duration:focus {
+    border-color: #4a9eff;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.form-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.confirm-button,
+.cancel-button {
+    padding: 8px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.confirm-button {
+    background: rgba(74, 158, 255, 0.2);
+    border-color: #4a9eff;
+    color: #4a9eff;
+}
+
+.confirm-button:hover {
+    background: rgba(74, 158, 255 0.3);
+}
+
+.cancel-button {
+    background: rgba(255, 255, 255, 0.1);
+    color: #aaaaaa;
+}
+
+.cancel-button:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+}
+
+.delete-button {
+    padding: 4px 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    color: #aaaaaa;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.delete-button:hover {
+    background: rgba(255, 77, 77, 0.3);
+    border-color: #ff4d4d;
+    color: #ff4d4d;
+}

@@ -1,0 +1,16 @@
+{
+  "meta": {
+    "version": "0.1.0",
+    "fps": 24,
+    "createdAt": "2026-02-10T20:40:32.763Z",
+    "modifiedAt": "2026-02-10T20:40:32.763Z"
+  },
+  "frames": {},
+  "storyboardFrames": {},
+  "audio": {
+    "tracks": []
+  },
+  "camera": {
+    "keyframes": []
+  }
+}

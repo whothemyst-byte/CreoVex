@@ -1,0 +1,119 @@
+/**
+ * Audio Lane Styling
+ * Timeline audio track visualization
+ */
+
+.audio-lane {
+    width: 100%;
+    height: 60px;
+    background: rgba(0, 0, 0, 0.2);
+    border-top: 1px solid var(--border-soft);
+    position: relative;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+.audio-lane-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-muted);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.audio-track-container {
+    position: relative;
+    height: 100%;
+    padding: var(--spacing-sm) var(--spacing-lg);
+    min-width: min-content;
+}
+
+/* ====================
+   AUDIO BLOCK
+   ==================== */
+
+.audio-block {
+    position: absolute;
+    top: var(--spacing-sm);
+    height: calc(100% - var(--spacing-md));
+    background: linear-gradient(135deg, rgba(74, 158, 255, 0.15), rgba(74, 158, 255, 0.25));
+    border: 1px solid rgba(74, 158, 255, 0.4);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    overflow: hidden;
+}
+
+.audio-block:hover {
+    background: linear-gradient(135deg, rgba(74, 158, 255, 0.25), rgba(74, 158, 255, 0.35));
+    border-color: rgba(74, 158, 255, 0.6);
+    box-shadow: var(--shadow-button);
+}
+
+.audio-block.playing {
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 12px rgba(74, 158, 255, 0.4);
+}
+
+/* ====================
+   WAVEFORM PLACEHOLDER
+   ==================== */
+
+.waveform-placeholder {
+    position: absolute;
+    inset: 0;
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+/* ====================
+   AUDIO INFO
+   ==================== */
+
+.audio-info {
+    position: absolute;
+    bottom: 4px;
+    left: 8px;
+    right: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 10px;
+    color: var(--text-primary);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    pointer-events: none;
+}
+
+.audio-name {
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.audio-duration {
+    font-family: 'Courier New', monospace;
+    opacity: 0.8;
+}
+
+/* ====================
+   PLAYHEAD INDICATOR
+   ==================== */
+
+.audio-playhead {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--accent-blue);
+    box-shadow: 0 0 8px rgba(74, 158, 255, 0.6);
+    pointer-events: none;
+}
+
+/* TODO: Drag-to-reposition audio block */
+/* TODO: Resize handles for trimming */
+/* TODO: Volume knob UI */
+/* TODO: Mute/solo buttons */

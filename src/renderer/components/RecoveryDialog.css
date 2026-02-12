@@ -1,0 +1,110 @@
+/**
+ * Recovery Dialog Styles
+ */
+
+.recovery-dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    backdrop-filter: blur(4px);
+}
+
+.recovery-dialog {
+    background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+    border-radius: 12px;
+    padding: 40px;
+    max-width: 480px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    text-align: center;
+}
+
+.recovery-dialog-icon {
+    font-size: 64px;
+    margin-bottom: 20px;
+}
+
+.recovery-dialog h2 {
+    color: #ffffff;
+    font-size: 24px;
+    font-weight: 600;
+    margin: 0 0 16px 0;
+}
+
+.recovery-message {
+    color: #cccccc;
+    font-size: 16px;
+    line-height: 1.5;
+    margin: 0 0 12px 0;
+}
+
+.recovery-message strong {
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.recovery-question {
+    color: #aaaaaa;
+    font-size: 14px;
+    margin: 0 0 32px 0;
+}
+
+.recovery-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-bottom: 24px;
+}
+
+.recovery-button {
+    padding: 12px 32px;
+    font-size: 15px;
+    font-weight: 500;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.recovery-button.primary {
+    background: linear-gradient(135deg, #4a9eff 0%, #357abd 100%);
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(74, 158, 255, 0.3);
+}
+
+.recovery-button.primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(74, 158, 255, 0.4);
+}
+
+.recovery-button.secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: #cccccc;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.recovery-button.secondary:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+}
+
+.recovery-details {
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.recovery-details small {
+    color: #666666;
+    font-size: 12px;
+    font-family: 'Courier New', monospace;
+    word-break: break-all;
+}

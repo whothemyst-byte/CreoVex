@@ -63,6 +63,9 @@ const autosaveAPI = {
     },
     discard: async (autosavePath) => {
         return await ipcRenderer.invoke('autosave:discard', autosavePath);
+    },
+    discardMany: async (autosavePaths) => {
+        return await ipcRenderer.invoke('autosave:discardMany', autosavePaths);
     }
 };
 

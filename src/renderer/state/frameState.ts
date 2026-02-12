@@ -104,6 +104,7 @@ interface FrameState {
     frameStore: FrameStore;
     storyboardFrames: FrameStore; // Separate storyboard storage
     onionSkinEnabled: boolean;
+    globalMuted: boolean;
 
     // Playback state
     isPlaying: boolean;
@@ -136,6 +137,7 @@ interface FrameState {
 
     // Onion skin
     toggleOnionSkin: () => void;
+    setOnionSkinEnabled: (enabled: boolean) => void;
 
     // Playback controls
     play: () => void;
@@ -154,6 +156,8 @@ interface FrameState {
     updateAudioTrack: (id: string, updates: Partial<AudioTrack>) => void;
     getAudioTrack: (id: string) => AudioTrack | undefined;
     getAudioTracksAtFrame: (frame: number) => AudioTrack[];
+    toggleGlobalMute: () => void;
+    setFps: (fps: number) => void;
 
     // Project persistence
     serializeProject: () => ProjectSnapshot;
@@ -168,6 +172,7 @@ export const useFrameState = create<FrameState>((set, get) => ({
     frameStore: {},
     storyboardFrames: {}, // Separate storyboard storage
     onionSkinEnabled: false,
+    globalMuted: false,
     isPlaying: false,
     playheadFrame: 1,
     cameraKeyframes: [],
@@ -303,6 +308,10 @@ export const useFrameState = create<FrameState>((set, get) => ({
     toggleOnionSkin: () => set((state) => ({
         onionSkinEnabled: !state.onionSkinEnabled
     })),
+
+    setOnionSkinEnabled: (enabled: boolean) => set({
+        onionSkinEnabled: enabled
+    }),
 
     /**
      * Start playback
@@ -456,6 +465,14 @@ export const useFrameState = create<FrameState>((set, get) => ({
         });
     },
 
+    toggleGlobalMute: () => set((state) => ({
+        globalMuted: !state.globalMuted
+    })),
+
+    setFps: (fps: number) => set({
+        fps: Math.max(1, Math.min(120, Math.round(fps)))
+    }),
+
     /**
      * Serialize project to JSON snapshot
      * 
@@ -469,7 +486,7 @@ export const useFrameState = create<FrameState>((set, get) => ({
 
         return {
             meta: {
-                version: '0.1.0',
+                version: '1.0.0',
                 fps: state.fps,
                 createdAt: now,
                 modifiedAt: now
@@ -512,7 +529,7 @@ export const useFrameState = create<FrameState>((set, get) => ({
      */
     deserializeProject: (snapshot: ProjectSnapshot) => {
         // Check version compatibility
-        if (snapshot.meta.version !== '0.1.0') {
+        if (snapshot.meta.version !== '0.1.0' && snapshot.meta.version !== '1.0.0') {
             console.warn(`Project version ${snapshot.meta.version} may not be fully compatible`);
         }
 
@@ -544,7 +561,8 @@ export const useFrameState = create<FrameState>((set, get) => ({
             fps: snapshot.meta.fps || 24,
             currentFrame: 1,
             playheadFrame: 1,
-            isPlaying: false
+            isPlaying: false,
+            globalMuted: false
         });
 
         // Deserialize narrative data (if present)
@@ -577,7 +595,8 @@ export const useFrameState = create<FrameState>((set, get) => ({
             audioTracks: [],
             currentFrame: 1,
             playheadFrame: 1,
-            isPlaying: false
+            isPlaying: false,
+            globalMuted: false
         });
 
         // Clear narrative data

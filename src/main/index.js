@@ -26,6 +26,193 @@ const fsPromises = require('fs').promises;
 
 let mainWindow = null;
 const MAX_LOG_FILE_SIZE_BYTES = 2 * 1024 * 1024;
+const DEFAULT_FPS = 24;
+const AUDIO_METADATA_READ_BYTES = 512 * 1024;
+
+const MP3_BITRATE_TABLES = {
+    V1L1: [0, 32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448, 0],
+    V1L2: [0, 32, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384, 0],
+    V1L3: [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 0],
+    V2L1: [0, 32, 48, 56, 64, 80, 96, 112, 128, 144, 160, 176, 192, 224, 256, 0],
+    V2L2L3: [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160, 0]
+};
+
+const MP3_SAMPLE_RATES = {
+    0: [11025, 12000, 8000],   // MPEG 2.5
+    2: [22050, 24000, 16000],  // MPEG 2
+    3: [44100, 48000, 32000]   // MPEG 1
+};
+
+function parseSynchsafeInteger(buffer, offset) {
+    if (buffer.length < offset + 4) {
+        return 0;
+    }
+    return ((buffer[offset] & 0x7f) << 21)
+        | ((buffer[offset + 1] & 0x7f) << 14)
+        | ((buffer[offset + 2] & 0x7f) << 7)
+        | (buffer[offset + 3] & 0x7f);
+}
+
+function parseWavMetadata(headBuffer) {
+    if (headBuffer.length < 44) {
+        return null;
+    }
+    if (headBuffer.toString('ascii', 0, 4) !== 'RIFF' || headBuffer.toString('ascii', 8, 12) !== 'WAVE') {
+        return null;
+    }
+
+    let offset = 12;
+    let channels = 0;
+    let sampleRate = 0;
+    let bitsPerSample = 0;
+    let dataChunkSize = 0;
+
+    while (offset + 8 <= headBuffer.length) {
+        const chunkId = headBuffer.toString('ascii', offset, offset + 4);
+        const chunkSize = headBuffer.readUInt32LE(offset + 4);
+        const chunkDataOffset = offset + 8;
+
+        if (chunkId === 'fmt ' && chunkDataOffset + 16 <= headBuffer.length) {
+            channels = headBuffer.readUInt16LE(chunkDataOffset + 2);
+            sampleRate = headBuffer.readUInt32LE(chunkDataOffset + 4);
+            bitsPerSample = headBuffer.readUInt16LE(chunkDataOffset + 14);
+        } else if (chunkId === 'data') {
+            dataChunkSize = chunkSize;
+            break;
+        }
+
+        offset = chunkDataOffset + chunkSize + (chunkSize % 2);
+    }
+
+    if (!sampleRate || !channels || !bitsPerSample || !dataChunkSize) {
+        return null;
+    }
+
+    const bytesPerSecond = sampleRate * channels * (bitsPerSample / 8);
+    if (!bytesPerSecond) {
+        return null;
+    }
+
+    const durationSeconds = dataChunkSize / bytesPerSecond;
+    if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) {
+        return null;
+    }
+
+    return {
+        durationSeconds,
+        sampleRate,
+        metadataSource: 'wav-header'
+    };
+}
+
+function parseMp3Bitrate(versionBits, layerBits, bitrateIndex) {
+    const layerKey = layerBits === 3 ? 'L1' : (layerBits === 2 ? 'L2' : 'L3');
+    const tableKey = versionBits === 3
+        ? `V1${layerKey}`
+        : (layerKey === 'L1' ? 'V2L1' : 'V2L2L3');
+    const table = MP3_BITRATE_TABLES[tableKey];
+    if (!table) {
+        return 0;
+    }
+    return table[bitrateIndex] || 0;
+}
+
+function parseMp3SamplesPerFrame(versionBits, layerBits) {
+    if (layerBits === 3) {
+        return 384;
+    }
+    if (layerBits === 2) {
+        return 1152;
+    }
+    return versionBits === 3 ? 1152 : 576;
+}
+
+function parseMp3Metadata(headBuffer, fileSizeBytes) {
+    if (headBuffer.length < 4) {
+        return null;
+    }
+
+    let offset = 0;
+    if (headBuffer.length >= 10 && headBuffer.toString('ascii', 0, 3) === 'ID3') {
+        const id3Size = parseSynchsafeInteger(headBuffer, 6);
+        offset = 10 + id3Size;
+    }
+
+    for (let i = offset; i <= headBuffer.length - 4; i += 1) {
+        const b1 = headBuffer[i];
+        const b2 = headBuffer[i + 1];
+        const b3 = headBuffer[i + 2];
+
+        if (b1 !== 0xff || (b2 & 0xe0) !== 0xe0) {
+            continue;
+        }
+
+        const versionBits = (b2 >> 3) & 0x03;
+        const layerBits = (b2 >> 1) & 0x03;
+        const bitrateIndex = (b3 >> 4) & 0x0f;
+        const sampleRateIndex = (b3 >> 2) & 0x03;
+
+        if (versionBits === 1 || layerBits === 0 || bitrateIndex === 0 || bitrateIndex === 15 || sampleRateIndex === 3) {
+            continue;
+        }
+
+        const sampleRates = MP3_SAMPLE_RATES[versionBits];
+        if (!sampleRates) {
+            continue;
+        }
+
+        const sampleRate = sampleRates[sampleRateIndex];
+        const bitrateKbps = parseMp3Bitrate(versionBits, layerBits, bitrateIndex);
+        if (!sampleRate || !bitrateKbps) {
+            continue;
+        }
+
+        const audioBytes = Math.max(0, fileSizeBytes - i);
+        const durationSeconds = (audioBytes * 8) / (bitrateKbps * 1000);
+        const samplesPerFrame = parseMp3SamplesPerFrame(versionBits, layerBits);
+        const estimatedFrameCount = durationSeconds > 0
+            ? (durationSeconds * sampleRate) / samplesPerFrame
+            : 0;
+
+        if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) {
+            continue;
+        }
+
+        return {
+            durationSeconds,
+            sampleRate,
+            estimatedFrameCount,
+            metadataSource: 'mp3-frame-header'
+        };
+    }
+
+    return null;
+}
+
+async function extractAudioMetadata(filePath) {
+    const stats = await fsPromises.stat(filePath);
+    const bytesToRead = Math.min(AUDIO_METADATA_READ_BYTES, stats.size);
+    const file = await fsPromises.open(filePath, 'r');
+
+    try {
+        const headBuffer = Buffer.alloc(bytesToRead);
+        await file.read(headBuffer, 0, bytesToRead, 0);
+
+        const wav = parseWavMetadata(headBuffer);
+        if (wav) {
+            return wav;
+        }
+
+        const mp3 = parseMp3Metadata(headBuffer, stats.size);
+        if (mp3) {
+            return mp3;
+        }
+
+        return null;
+    } finally {
+        await file.close();
+    }
+}
 
 async function appendMainLog(level, message, data) {
     try {
@@ -331,15 +518,27 @@ function registerIPCHandlers() {
 
     ipcMain.handle('audio:loadAudio', async (_event, filePath) => {
         try {
-            // For now, just return success with placeholder duration
-            // TODO: Use proper audio analysis library
-            const stats = await fs.stat(filePath);
-            const durationFrames = 240; // Placeholder: ~10 seconds at 24fps
+            if (!filePath || typeof filePath !== 'string') {
+                return { success: false, error: 'Invalid file path' };
+            }
+
+            const metadata = await extractAudioMetadata(filePath);
+            if (!metadata) {
+                return {
+                    success: true,
+                    durationFrames: undefined,
+                    durationSeconds: undefined,
+                    sampleRate: undefined,
+                    metadataSource: 'unavailable'
+                };
+            }
 
             return {
                 success: true,
-                durationFrames,
-                sampleRate: 48000
+                durationFrames: Math.max(1, Math.round(metadata.durationSeconds * DEFAULT_FPS)),
+                durationSeconds: metadata.durationSeconds,
+                sampleRate: metadata.sampleRate,
+                metadataSource: metadata.metadataSource
             };
         } catch (error) {
             console.error('Audio load failed:', error);
@@ -458,7 +657,7 @@ function registerIPCHandlers() {
     ipcMain.handle('autosave:check', async () => {
         try {
             const os = require('os');
-            const candidateDirs = [process.cwd(), os.tmpdir()];
+            const candidateDirs = [process.cwd(), os.tmpdir(), app.getPath('userData')];
             const candidates = [];
 
             for (const dir of candidateDirs) {
@@ -476,11 +675,21 @@ function registerIPCHandlers() {
                     const fullPath = path.join(dir, entry.name);
                     try {
                         const stats = await fsPromises.stat(fullPath);
+                        let isValid = false;
+                        try {
+                            const data = await fsPromises.readFile(fullPath, 'utf-8');
+                            JSON.parse(data);
+                            isValid = true;
+                        } catch {
+                            isValid = false;
+                        }
+
                         candidates.push({
                             path: fullPath,
                             modifiedAt: stats.mtime.toISOString(),
                             size: stats.size,
-                            mtimeMs: stats.mtimeMs
+                            mtimeMs: stats.mtimeMs,
+                            isValid
                         });
                     } catch {
                         // Ignore unreadable files.
@@ -492,13 +701,37 @@ function registerIPCHandlers() {
                 return { found: false };
             }
 
-            candidates.sort((a, b) => b.mtimeMs - a.mtimeMs);
-            const latest = candidates[0];
+            const validCandidates = candidates.filter((candidate) => candidate.isValid);
+            const corruptedCount = candidates.length - validCandidates.length;
+
+            if (validCandidates.length === 0) {
+                candidates.sort((a, b) => b.mtimeMs - a.mtimeMs);
+                return {
+                    found: false,
+                    error: 'AUTOSAVE_NO_VALID_CANDIDATE',
+                    corruptedFound: true,
+                    corruptedCount,
+                    candidateCount: candidates.length
+                };
+            }
+
+            validCandidates.sort((a, b) => b.mtimeMs - a.mtimeMs);
+            const latest = validCandidates[0];
+
+            const candidateSummaries = validCandidates.slice(0, 10).map((candidate) => ({
+                path: candidate.path,
+                modifiedAt: candidate.modifiedAt,
+                size: candidate.size
+            }));
+
             return {
                 found: true,
                 autosavePath: latest.path,
                 modifiedAt: latest.modifiedAt,
-                size: latest.size
+                size: latest.size,
+                candidateCount: validCandidates.length,
+                corruptedCount,
+                candidates: candidateSummaries
             };
         } catch (error) {
             console.error('Autosave check failed:', error);
@@ -510,7 +743,16 @@ function registerIPCHandlers() {
     // Restore from autosave file
     ipcMain.handle('autosave:restore', async (_event, autosavePath) => {
         try {
+            if (!autosavePath || typeof autosavePath !== 'string') {
+                return { success: false, error: 'Invalid autosave path' };
+            }
+
             const data = await fs.readFile(autosavePath, 'utf-8');
+            try {
+                JSON.parse(data);
+            } catch {
+                return { success: false, error: 'AUTOSAVE_INVALID_JSON' };
+            }
             return { success: true, data, filePath: autosavePath };
         } catch (error) {
             console.error('Autosave restore failed:', error);
@@ -522,11 +764,57 @@ function registerIPCHandlers() {
     // Discard autosave file
     ipcMain.handle('autosave:discard', async (_event, autosavePath) => {
         try {
+            if (!autosavePath || typeof autosavePath !== 'string') {
+                return { success: false, error: 'Invalid autosave path' };
+            }
+
             await fs.unlink(autosavePath);
             return { success: true };
         } catch (error) {
+            if (error && error.code === 'ENOENT') {
+                return { success: true };
+            }
             console.error('Autosave discard failed:', error);
             void appendMainLog('ERROR', 'Autosave discard failed', { error: error?.message || String(error) });
+            return { success: false, error: error.message };
+        }
+    });
+
+    // Discard multiple autosave files in one action
+    ipcMain.handle('autosave:discardMany', async (_event, autosavePaths) => {
+        try {
+            if (!Array.isArray(autosavePaths)) {
+                return { success: false, error: 'Invalid autosave path list' };
+            }
+
+            const failedPaths = [];
+            let removed = 0;
+            for (const autosavePath of autosavePaths) {
+                if (!autosavePath || typeof autosavePath !== 'string') {
+                    failedPaths.push(String(autosavePath));
+                    continue;
+                }
+
+                try {
+                    await fs.unlink(autosavePath);
+                    removed += 1;
+                } catch (error) {
+                    if (error && error.code === 'ENOENT') {
+                        continue;
+                    }
+                    failedPaths.push(autosavePath);
+                }
+            }
+
+            return {
+                success: failedPaths.length === 0,
+                removed,
+                failedPaths,
+                error: failedPaths.length > 0 ? 'Some autosave files could not be removed' : undefined
+            };
+        } catch (error) {
+            console.error('Autosave discardMany failed:', error);
+            void appendMainLog('ERROR', 'Autosave discardMany failed', { error: error?.message || String(error) });
             return { success: false, error: error.message };
         }
     });

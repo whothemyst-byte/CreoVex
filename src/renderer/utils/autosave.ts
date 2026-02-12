@@ -23,10 +23,9 @@ let isPaused = false;
 let currentProjectPath: string | undefined;
 let getProjectData: ProjectDataGetter | null = null;
 let lastAutosaveTime = 0;
+let autosaveIntervalMs = 30 * 1000;
 
 // Autosave interval (30 seconds)
-const AUTOSAVE_INTERVAL_MS = 30 * 1000;
-
 // Minimum time between autosaves (prevent spam)
 const MIN_AUTOSAVE_INTERVAL_MS = 5 * 1000;
 
@@ -52,7 +51,7 @@ export function startAutosave(dataGetter: ProjectDataGetter, projectPath?: strin
         if (!isPaused) {
             performAutosave();
         }
-    }, AUTOSAVE_INTERVAL_MS);
+    }, autosaveIntervalMs);
 }
 
 /**
@@ -116,6 +115,23 @@ export function triggerAutosave(): void {
 export function updateAutosavePath(projectPath: string | undefined): void {
     logger.info('Autosave path updated', { projectPath });
     currentProjectPath = projectPath;
+}
+
+/**
+ * Update autosave interval (seconds)
+ */
+export function setAutosaveIntervalSeconds(seconds: number): void {
+    const clampedSeconds = Math.max(5, Math.min(300, Math.round(seconds)));
+    autosaveIntervalMs = clampedSeconds * 1000;
+    logger.info('Autosave interval updated', { seconds: clampedSeconds });
+
+    if (getProjectData) {
+        startAutosave(getProjectData, currentProjectPath);
+    }
+}
+
+export function getAutosaveIntervalSeconds(): number {
+    return Math.round(autosaveIntervalMs / 1000);
 }
 
 /**

@@ -97,7 +97,9 @@ const audioAPI = {
     loadAudio: async (filePath: string): Promise<{
         success: boolean;
         durationFrames?: number;
+        durationSeconds?: number;
         sampleRate?: number;
+        metadataSource?: string;
         error?: string;
     }> => {
         return await ipcRenderer.invoke('audio:loadAudio', filePath);
@@ -197,6 +199,15 @@ const autosaveAPI = {
         autosavePath?: string;
         modifiedAt?: string;
         size?: number;
+        candidateCount?: number;
+        corruptedCount?: number;
+        corruptedFound?: boolean;
+        candidates?: Array<{
+            path: string;
+            modifiedAt: string;
+            size: number;
+        }>;
+        error?: string;
     }> => {
         return await ipcRenderer.invoke('autosave:check');
     },
@@ -215,6 +226,15 @@ const autosaveAPI = {
         error?: string;
     }> => {
         return await ipcRenderer.invoke('autosave:discard', autosavePath);
+    },
+
+    discardMany: async (autosavePaths: string[]): Promise<{
+        success: boolean;
+        removed?: number;
+        failedPaths?: string[];
+        error?: string;
+    }> => {
+        return await ipcRenderer.invoke('autosave:discardMany', autosavePaths);
     }
 };
 

@@ -17,11 +17,12 @@ import DrawingCanvas from './components/DrawingCanvas';
 import TimelineBar from './components/TimelineBar';
 import ToolRail from './components/ToolRail';
 import { useFrameState } from './state/frameState';
+import { useToolState } from './state/toolState';
 import { useKeyboardShortcuts } from './utils/keyboardShortcuts';
 import './App.css';
 import { exportToUSD, validateUSDExport } from './export/usdExporter';
 import { exportToOTIO, validateOTIOExport } from './export/otioExporter';
-import { startAutosave, stopAutosave, updateAutosavePath, triggerAutosave } from './utils/autosave';
+import { getAutosaveIntervalSeconds, setAutosaveIntervalSeconds, startAutosave, stopAutosave, updateAutosavePath, triggerAutosave } from './utils/autosave';
 import { logger } from './utils/logger';
 import { getReadableError } from './utils/errorMessages';
 import { StageNav } from './components/StageNav';
@@ -30,7 +31,12 @@ import { ShotPanel } from './components/ShotPanel';
 import { WarningToast } from './components/WarningToast';
 import { StoryboardTools } from './components/StoryboardTools';
 import { RecoveryDialog } from './components/RecoveryDialog';
-import { Stage, useNarrativeState } from '../data/narrative';
+import { Stage, useNarrativeState, type Shot } from '../data/narrative';
+import { FrameRangeDialog } from './components/dialogs/FrameRangeDialog';
+import { ShotSplitDialog } from './components/dialogs/ShotSplitDialog';
+import { ShotMergeDialog } from './components/dialogs/ShotMergeDialog';
+import { SettingsDialog } from './components/dialogs/SettingsDialog';
+import { getDefaultSettings, loadSettings, saveSettings, type AppSettings } from './utils/settings';
 
 function App() {
     const {
@@ -40,21 +46,51 @@ function App() {
         fps,
         maxFrames,
         addAudioTrack,
+        toggleGlobalMute,
+        setFps,
+        setOnionSkinEnabled,
+        currentFrame,
+        getCameraAtFrame,
+        addCameraKeyframe,
         audioTracks,
         cameraKeyframes,
         getStrokes
     } = useFrameState();
+    const { setBrushSize, setEraserSize } = useToolState();
     const [saveStatus, setSaveStatus] = useState<string>('');
     const [projectPath, setProjectPath] = useState<string | undefined>(undefined);
     const [isDirty, setIsDirty] = useState<boolean>(false);
     const [warning, setWarning] = useState<string | null>(null);
-    const [recoveryInfo, setRecoveryInfo] = useState<{ path: string; modifiedAt: Date } | null>(null);
+    const [recoveryInfo, setRecoveryInfo] = useState<{
+        path: string;
+        modifiedAt: Date;
+        candidatePaths: string[];
+        candidateCount: number;
+        corruptedCount: number;
+    } | null>(null);
+    const [showFrameRangeDialog, setShowFrameRangeDialog] = useState(false);
+    const [showSplitDialog, setShowSplitDialog] = useState(false);
+    const [showMergeDialog, setShowMergeDialog] = useState(false);
+    const [showSettingsDialog, setShowSettingsDialog] = useState(false);
+    const [mergeCandidates, setMergeCandidates] = useState<Shot[]>([]);
+    const [settings, setSettings] = useState<AppSettings>(getDefaultSettings());
 
     // Enable keyboard shortcuts globally
     useKeyboardShortcuts();
 
     // Narrative state
-    const { currentStage } = useNarrativeState();
+    const {
+        currentStage,
+        selectedSceneId,
+        selectedShotId,
+        scenes,
+        updateShot,
+        addShot,
+        removeShot
+    } = useNarrativeState();
+
+    const selectedScene = scenes.find((scene) => scene.id === selectedSceneId);
+    const selectedShot = selectedScene?.shots.find((shot) => shot.id === selectedShotId);
 
     // Initialize Wasm engine on mount
     useEffect(() => {
@@ -128,10 +164,19 @@ function App() {
             try {
                 const result = await window.electronAPI.autosave.check();
                 if (result.found && result.autosavePath) {
+                    const candidatePaths = (result.candidates || []).map((candidate) => candidate.path);
+                    const fallbackPaths = candidatePaths.length > 0 ? candidatePaths : [result.autosavePath];
+
                     setRecoveryInfo({
                         path: result.autosavePath,
-                        modifiedAt: result.modifiedAt ? new Date(result.modifiedAt) : new Date()
+                        modifiedAt: result.modifiedAt ? new Date(result.modifiedAt) : new Date(),
+                        candidatePaths: fallbackPaths,
+                        candidateCount: result.candidateCount || fallbackPaths.length,
+                        corruptedCount: result.corruptedCount || 0
                     });
+                } else if (result.corruptedFound || result.error === 'AUTOSAVE_NO_VALID_CANDIDATE') {
+                    setSaveStatus(getReadableError(result.error || 'AUTOSAVE_NO_VALID_CANDIDATE'));
+                    setTimeout(() => setSaveStatus(''), 5000);
                 }
             } catch (error) {
                 logger.error('Autosave recovery check failed', { error });
@@ -140,6 +185,16 @@ function App() {
 
         checkRecovery();
     }, []);
+
+    useEffect(() => {
+        const loaded = loadSettings();
+        setSettings(loaded);
+        setBrushSize(loaded.brushSizeDefault);
+        setEraserSize(loaded.eraserSizeDefault);
+        setFps(loaded.defaultFps);
+        setOnionSkinEnabled(loaded.onionSkinDefault);
+        setAutosaveIntervalSeconds(loaded.autosaveIntervalSec);
+    }, [setBrushSize, setEraserSize, setFps, setOnionSkinEnabled]);
 
     // Block window close if there are unsaved changes
     useEffect(() => {
@@ -302,7 +357,12 @@ function App() {
 
                 // Beta-safe path: avoid full renderer decode during import.
                 const metaResult = await window.electronAPI.audio.loadAudio(result.filePath);
-                const durationFrames = Math.max(1, metaResult.durationFrames || Math.ceil(10 * fps));
+                const durationFrames = Math.max(
+                    1,
+                    metaResult.durationSeconds
+                        ? Math.round(metaResult.durationSeconds * fps)
+                        : (metaResult.durationFrames || Math.ceil(10 * fps))
+                );
 
                 // Create audio track
                 addAudioTrack({
@@ -463,6 +523,131 @@ function App() {
         }
     };
 
+    const handleToggleMute = () => {
+        toggleGlobalMute();
+    };
+
+    const handleAddCameraKeyframe = () => {
+        const cam = getCameraAtFrame(currentFrame);
+        addCameraKeyframe(currentFrame, cam.x, cam.y, cam.zoom);
+        setSaveStatus(`Camera keyframe added at frame ${currentFrame}`);
+        setTimeout(() => setSaveStatus(''), 2000);
+        triggerAutosave();
+    };
+
+    const handleOpenFrameRange = () => {
+        if (!selectedShot) {
+            setWarning('Select a shot before adjusting frame range.');
+            return;
+        }
+        setShowFrameRangeDialog(true);
+    };
+
+    const handleApplyFrameRange = (startFrame: number, endFrame: number) => {
+        if (!selectedShot) return;
+        updateShot(selectedShot.id, { startFrame, endFrame });
+        setShowFrameRangeDialog(false);
+        setSaveStatus(`Updated shot range: ${startFrame}-${endFrame}`);
+        setTimeout(() => setSaveStatus(''), 2500);
+        triggerAutosave();
+    };
+
+    const handleOpenShotSplit = () => {
+        if (!selectedShot || !selectedSceneId) {
+            setWarning('Select a shot before splitting.');
+            return;
+        }
+        setShowSplitDialog(true);
+    };
+
+    const handleSplitShot = (splitFrame: number) => {
+        if (!selectedShot || !selectedSceneId) return;
+        const oldEnd = selectedShot.endFrame;
+        if (splitFrame <= selectedShot.startFrame || splitFrame >= oldEnd) {
+            setWarning('Split frame must be inside the selected shot range.');
+            return;
+        }
+
+        updateShot(selectedShot.id, { endFrame: splitFrame });
+        addShot(selectedSceneId, {
+            name: `${selectedShot.name} B`,
+            purpose: selectedShot.purpose || '',
+            startFrame: splitFrame + 1,
+            endFrame: oldEnd,
+            hasStoryboard: selectedShot.hasStoryboard,
+            hasAnimation: selectedShot.hasAnimation
+        });
+
+        setShowSplitDialog(false);
+        setSaveStatus(`Shot split at frame ${splitFrame}`);
+        setTimeout(() => setSaveStatus(''), 2500);
+        triggerAutosave();
+    };
+
+    const handleOpenShotMerge = () => {
+        if (!selectedShot || !selectedScene) {
+            setWarning('Select a shot before merging.');
+            return;
+        }
+
+        const sorted = [...selectedScene.shots].sort((a, b) => a.startFrame - b.startFrame);
+        const idx = sorted.findIndex((s) => s.id === selectedShot.id);
+        const candidates: Shot[] = [];
+        if (idx > 0) {
+            candidates.push(sorted[idx - 1]);
+        }
+        if (idx >= 0 && idx < sorted.length - 1) {
+            candidates.push(sorted[idx + 1]);
+        }
+
+        if (candidates.length === 0) {
+            setWarning('No adjacent shot available for merge.');
+            return;
+        }
+
+        setMergeCandidates(candidates);
+        setShowMergeDialog(true);
+    };
+
+    const handleMergeShot = (targetShotId: string) => {
+        if (!selectedShot || !selectedScene) return;
+        const target = selectedScene.shots.find((shot) => shot.id === targetShotId);
+        if (!target) {
+            setWarning('Selected merge target no longer exists.');
+            return;
+        }
+
+        const mergedStart = Math.min(selectedShot.startFrame, target.startFrame);
+        const mergedEnd = Math.max(selectedShot.endFrame, target.endFrame);
+
+        updateShot(selectedShot.id, {
+            startFrame: mergedStart,
+            endFrame: mergedEnd,
+            hasStoryboard: selectedShot.hasStoryboard || target.hasStoryboard,
+            hasAnimation: selectedShot.hasAnimation || target.hasAnimation
+        });
+        removeShot(target.id);
+
+        setShowMergeDialog(false);
+        setMergeCandidates([]);
+        setSaveStatus(`Merged shot range to ${mergedStart}-${mergedEnd}`);
+        setTimeout(() => setSaveStatus(''), 2500);
+        triggerAutosave();
+    };
+
+    const handleSaveSettings = (nextSettings: AppSettings) => {
+        setSettings(nextSettings);
+        saveSettings(nextSettings);
+        setBrushSize(nextSettings.brushSizeDefault);
+        setEraserSize(nextSettings.eraserSizeDefault);
+        setFps(nextSettings.defaultFps);
+        setOnionSkinEnabled(nextSettings.onionSkinDefault);
+        setAutosaveIntervalSeconds(nextSettings.autosaveIntervalSec);
+        setShowSettingsDialog(false);
+        setSaveStatus(`Settings saved (autosave ${getAutosaveIntervalSeconds()}s)`);
+        setTimeout(() => setSaveStatus(''), 2500);
+    };
+
     const handleRestoreRecovery = async () => {
         if (!recoveryInfo || !window.electronAPI?.autosave) return;
 
@@ -473,14 +658,13 @@ function App() {
                 deserializeProject(JSON.parse(result.data));
                 setSaveStatus(`Recovered autosave: ${recoveryInfo.path}`);
                 setTimeout(() => setSaveStatus(''), 4000);
+                setRecoveryInfo(null);
             } else {
-                setSaveStatus(`Recovery failed: ${result.error || 'Unknown error'}`);
+                setSaveStatus(`Recovery failed: ${getReadableError(result.error || 'Unknown error')}`);
             }
         } catch (error) {
             const userMessage = getReadableError(error);
             setSaveStatus(`Recovery failed: ${userMessage}`);
-        } finally {
-            setRecoveryInfo(null);
         }
     };
 
@@ -491,7 +675,11 @@ function App() {
         }
 
         try {
-            await window.electronAPI.autosave.discard(recoveryInfo.path);
+            if (recoveryInfo.candidatePaths.length > 1 && window.electronAPI.autosave.discardMany) {
+                await window.electronAPI.autosave.discardMany(recoveryInfo.candidatePaths);
+            } else {
+                await window.electronAPI.autosave.discard(recoveryInfo.path);
+            }
         } catch (error) {
             logger.warn('Failed to discard autosave', { error, path: recoveryInfo.path });
         } finally {
@@ -514,7 +702,15 @@ function App() {
 
             {/* Tool Rail (left) */}
             <div className="tool-rail">
-                <ToolRail />
+                <ToolRail
+                    onImportAudio={handleImportAudio}
+                    onToggleMute={handleToggleMute}
+                    onOpenSettings={() => setShowSettingsDialog(true)}
+                    onOpenFrameRange={handleOpenFrameRange}
+                    onOpenShotSplit={handleOpenShotSplit}
+                    onOpenShotMerge={handleOpenShotMerge}
+                    onAddCameraKeyframe={handleAddCameraKeyframe}
+                />
             </div>
 
             {/* Narrative Panels (left sidebar - conditional) */}
@@ -560,6 +756,8 @@ function App() {
                 <RecoveryDialog
                     autosavePath={recoveryInfo.path}
                     autosaveTime={recoveryInfo.modifiedAt}
+                    candidateCount={recoveryInfo.candidateCount}
+                    corruptedCount={recoveryInfo.corruptedCount}
                     onRestore={handleRestoreRecovery}
                     onDiscard={handleDiscardRecovery}
                 />
@@ -569,6 +767,42 @@ function App() {
             <div className="inspector-panel">
                 {/* TODO: Context-aware property inspector */}
             </div>
+
+            {/* Toolbar Action Dialogs */}
+            {showFrameRangeDialog && selectedShot && (
+                <FrameRangeDialog
+                    shotName={selectedShot.name}
+                    maxFrames={maxFrames}
+                    initialStart={selectedShot.startFrame}
+                    initialEnd={selectedShot.endFrame}
+                    onClose={() => setShowFrameRangeDialog(false)}
+                    onConfirm={handleApplyFrameRange}
+                />
+            )}
+            {showSplitDialog && selectedShot && (
+                <ShotSplitDialog
+                    shotName={selectedShot.name}
+                    startFrame={selectedShot.startFrame}
+                    endFrame={selectedShot.endFrame}
+                    onClose={() => setShowSplitDialog(false)}
+                    onConfirm={handleSplitShot}
+                />
+            )}
+            {showMergeDialog && selectedShot && (
+                <ShotMergeDialog
+                    selectedShot={selectedShot}
+                    mergeCandidates={mergeCandidates}
+                    onClose={() => setShowMergeDialog(false)}
+                    onConfirm={handleMergeShot}
+                />
+            )}
+            {showSettingsDialog && (
+                <SettingsDialog
+                    initialSettings={settings}
+                    onClose={() => setShowSettingsDialog(false)}
+                    onSave={handleSaveSettings}
+                />
+            )}
         </div>
     );
 }

@@ -11,11 +11,20 @@ import './RecoveryDialog.css';
 interface RecoveryDialogProps {
     autosavePath: string;
     autosaveTime: Date;
+    candidateCount?: number;
+    corruptedCount?: number;
     onRestore: () => void;
     onDiscard: () => void;
 }
 
-export function RecoveryDialog({ autosavePath, autosaveTime, onRestore, onDiscard }: RecoveryDialogProps) {
+export function RecoveryDialog({
+    autosavePath,
+    autosaveTime,
+    candidateCount = 1,
+    corruptedCount = 0,
+    onRestore,
+    onDiscard
+}: RecoveryDialogProps) {
     const timeString = autosaveTime.toLocaleString();
 
     return (
@@ -29,6 +38,16 @@ export function RecoveryDialog({ autosavePath, autosaveTime, onRestore, onDiscar
                 <p className="recovery-question">
                     Would you like to restore it?
                 </p>
+                {candidateCount > 1 && (
+                    <p className="recovery-message">
+                        Restoring the latest autosave from <strong>{candidateCount}</strong> recoverable files.
+                    </p>
+                )}
+                {corruptedCount > 0 && (
+                    <p className="recovery-message">
+                        Ignored <strong>{corruptedCount}</strong> corrupted autosave file(s).
+                    </p>
+                )}
 
                 <div className="recovery-actions">
                     <button

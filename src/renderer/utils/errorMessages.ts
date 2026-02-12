@@ -6,6 +6,20 @@
  */
 
 export function getReadableError(error: unknown): string {
+    if (typeof error === 'string') {
+        const message = error.toLowerCase();
+
+        if (message.includes('autosave_invalid_json')) {
+            return 'Autosave file is corrupted and cannot be restored.';
+        }
+
+        if (message.includes('autosave_no_valid_candidate')) {
+            return 'Only corrupted autosave files were found. Nothing can be restored.';
+        }
+
+        return `Operation failed: ${error}`;
+    }
+
     if (error instanceof Error) {
         const message = error.message.toLowerCase();
 
@@ -22,6 +36,14 @@ export function getReadableError(error: unknown): string {
         // File not found
         if (message.includes('enoent')) {
             return 'File not found. It may have been moved or deleted.';
+        }
+
+        if (message.includes('autosave_invalid_json')) {
+            return 'Autosave file is corrupted and cannot be restored.';
+        }
+
+        if (message.includes('autosave_no_valid_candidate')) {
+            return 'Only corrupted autosave files were found. Nothing can be restored.';
         }
 
         // Network/connection errors

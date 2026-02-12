@@ -19,17 +19,36 @@
 import React, { useState } from 'react';
 import { useToolState } from '../state/toolState';
 import { useFrameState } from '../state/frameState';
-import { useNarrativeState } from '../../data/narrative';
+import { Stage, useNarrativeState } from '../../data/narrative';
 import { getToolShortcut } from '../utils/keyboardShortcuts';
 import RenderDialog from './RenderDialog';
 import * as Icons from './icons/ToolIcons';
 import './ToolRail.css';
 
-const ToolRail: React.FC = () => {
+type ToolRailProps = {
+    onImportAudio: () => void;
+    onToggleMute: () => void;
+    onOpenSettings: () => void;
+    onOpenFrameRange: () => void;
+    onOpenShotSplit: () => void;
+    onOpenShotMerge: () => void;
+    onAddCameraKeyframe: () => void;
+};
+
+const ToolRail: React.FC<ToolRailProps> = ({
+    onImportAudio,
+    onToggleMute,
+    onOpenSettings,
+    onOpenFrameRange,
+    onOpenShotSplit,
+    onOpenShotMerge,
+    onAddCameraKeyframe
+}) => {
     const { activeTool, setTool } = useToolState();
     const {
         onionSkinEnabled,
         isPlaying,
+        globalMuted,
         toggleOnionSkin,
         play,
         stop,
@@ -50,10 +69,10 @@ const ToolRail: React.FC = () => {
     const [showRenderDialog, setShowRenderDialog] = useState(false);
 
     // Context-aware tool activation
-    const hasShotSelected = selectedShotId !== null;
-    const hasSceneSelected = selectedSceneId !== null;
-    const shotToolsEnabled = ['shot', 'storyboard', 'animation', 'edit'].includes(currentStage) && hasShotSelected;
-    const storyboardToolsVisible = currentStage === 'storyboard';
+    const hasShotSelected = Boolean(selectedShotId);
+    const hasSceneSelected = Boolean(selectedSceneId);
+    const shotToolsEnabled = [Stage.Shots, Stage.Storyboard, Stage.Animation, Stage.EditExport].includes(currentStage) && hasShotSelected;
+    const storyboardToolsVisible = currentStage === Stage.Storyboard;
 
     // Helper to create tool button
     const ToolButton = ({
@@ -63,6 +82,7 @@ const ToolRail: React.FC = () => {
         disabled = false,
         disabledReason,
         onClick,
+        active,
     }: {
         tool?: string;
         icon: React.FC<any>;
@@ -70,8 +90,9 @@ const ToolRail: React.FC = () => {
         disabled?: boolean;
         disabledReason?: string;
         onClick?: () => void;
+        active?: boolean;
     }) => {
-        const isActive = tool && activeTool === tool;
+        const isActive = active ?? (tool ? activeTool === tool : false);
         const shortcut = tool ? getToolShortcut(tool as any) : undefined;
         const tooltip = `${label}${shortcut ? ` (${shortcut})` : ''}${disabled && disabledReason ? ` - ${disabledReason}` : ''}`;
 
@@ -122,25 +143,28 @@ const ToolRail: React.FC = () => {
             <div className="tool-section">
                 <div className="section-label">Camera</div>
                 <ToolButton
-                    tool="cameraMove"
+                    active={activeTool === 'hand'}
                     icon={Icons.CameraMoveIcon}
                     label="Camera Move"
                     disabled={!shotToolsEnabled}
                     disabledReason={!hasSceneSelected ? "No scene selected" : "No shot selected"}
+                    onClick={() => setTool('hand')}
                 />
                 <ToolButton
-                    tool="cameraZoom"
+                    active={activeTool === 'zoom'}
                     icon={Icons.CameraZoomIcon}
                     label="Camera Zoom"
                     disabled={!shotToolsEnabled}
                     disabledReason={!hasSceneSelected ? "No scene selected" : "No shot selected"}
+                    onClick={() => setTool('zoom')}
                 />
                 <ToolButton
-                    tool="cameraKeyframe"
+                    active={false}
                     icon={Icons.CameraKeyframeIcon}
                     label="Add Camera Keyframe"
                     disabled={!shotToolsEnabled}
                     disabledReason={!hasSceneSelected ? "No scene selected" : "No shot selected"}
+                    onClick={onAddCameraKeyframe}
                 />
             </div>
 
@@ -148,25 +172,28 @@ const ToolRail: React.FC = () => {
             <div className="tool-section">
                 <div className="section-label">Shots</div>
                 <ToolButton
-                    tool="frameRange"
+                    active={false}
                     icon={Icons.FrameRangeIcon}
                     label="Adjust Frame Range"
                     disabled={!shotToolsEnabled}
                     disabledReason={!hasSceneSelected ? "No scene selected" : "No shot selected"}
+                    onClick={onOpenFrameRange}
                 />
                 <ToolButton
-                    tool="shotSplit"
+                    active={false}
                     icon={Icons.ShotSplitIcon}
                     label="Split Shot"
                     disabled={!shotToolsEnabled}
                     disabledReason={!hasSceneSelected ? "No scene selected" : "No shot selected"}
+                    onClick={onOpenShotSplit}
                 />
                 <ToolButton
-                    tool="shotMerge"
+                    active={false}
                     icon={Icons.ShotMergeIcon}
                     label="Merge Shots"
                     disabled={!shotToolsEnabled}
                     disabledReason={!hasSceneSelected ? "No scene selected" : "No shot selected"}
+                    onClick={onOpenShotMerge}
                 />
             </div>
 
@@ -224,15 +251,14 @@ const ToolRail: React.FC = () => {
                 <div className="section-label">Audio</div>
                 <ToolButton
                     icon={Icons.AddAudioIcon}
-                    label="Add Audio Track (Menu: File > Import > Audio)"
-                    disabled
-                    disabledReason="Use File > Import > Audio for beta"
+                    label="Add Audio Track"
+                    onClick={onImportAudio}
                 />
                 <ToolButton
                     icon={Icons.MuteIcon}
-                    label="Mute Audio (Coming Soon)"
-                    disabled
-                    disabledReason="Coming soon"
+                    label={globalMuted ? 'Unmute All Audio' : 'Mute All Audio'}
+                    onClick={onToggleMute}
+                    active={globalMuted}
                 />
             </div>
 
@@ -271,9 +297,8 @@ const ToolRail: React.FC = () => {
             <div className="tool-section">
                 <ToolButton
                     icon={Icons.SettingsIcon}
-                    label="Settings (Coming Soon)"
-                    disabled
-                    disabledReason="Coming soon"
+                    label="Settings"
+                    onClick={onOpenSettings}
                 />
                 <ToolButton
                     icon={Icons.RenderIcon}

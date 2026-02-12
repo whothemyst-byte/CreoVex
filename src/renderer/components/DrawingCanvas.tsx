@@ -83,7 +83,8 @@ const DrawingCanvas: React.FC = () => {
         getCameraAtFrame,
         addCameraKeyframe,
         hasCameraKeyframe,
-        audioTracks
+        audioTracks,
+        globalMuted
     } = useFrameState();
 
     // Access to get() for checking state in callbacks
@@ -121,7 +122,7 @@ const DrawingCanvas: React.FC = () => {
         let cancelled = false;
 
         const initAudio = async () => {
-            if (!isPlaying || audioTracks.length === 0) return;
+            if (!isPlaying || audioTracks.length === 0 || globalMuted) return;
 
             try {
                 // Snapshot play start frame to avoid restarting audio every timeline tick.
@@ -146,7 +147,7 @@ const DrawingCanvas: React.FC = () => {
                     }
 
                     const offset = (startFrame - track.startFrame) / fps;
-                    audioEngine.play(track.id, offset, track.volume);
+                    audioEngine.play(track.id, offset, globalMuted ? 0 : track.volume);
                 }
             } catch (error) {
                 console.error('Audio playback initialization failed:', error);
@@ -162,7 +163,7 @@ const DrawingCanvas: React.FC = () => {
                 audioEngine.stopAll();
             }
         };
-    }, [isPlaying, audioTracks, fps]);
+    }, [isPlaying, audioTracks, fps, globalMuted]);
 
     // TASK 2: Playback loop using requestAnimationFrame
     useEffect(() => {

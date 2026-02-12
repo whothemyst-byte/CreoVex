@@ -224,19 +224,15 @@ const ToolRail: React.FC = () => {
                 <div className="section-label">Audio</div>
                 <ToolButton
                     icon={Icons.AddAudioIcon}
-                    label="Add Audio Track"
-                    onClick={() => {
-                        // TODO: Trigger audio import
-                        console.log('Audio import not yet implemented');
-                    }}
+                    label="Add Audio Track (Menu: File > Import > Audio)"
+                    disabled
+                    disabledReason="Use File > Import > Audio for beta"
                 />
                 <ToolButton
                     icon={Icons.MuteIcon}
-                    label="Mute Audio"
-                    onClick={() => {
-                        // TODO: Toggle audio mute
-                        console.log('Audio mute not yet implemented');
-                    }}
+                    label="Mute Audio (Coming Soon)"
+                    disabled
+                    disabledReason="Coming soon"
                 />
             </div>
 
@@ -275,8 +271,9 @@ const ToolRail: React.FC = () => {
             <div className="tool-section">
                 <ToolButton
                     icon={Icons.SettingsIcon}
-                    label="Settings"
-                    onClick={() => console.log('Settings not yet implemented')}
+                    label="Settings (Coming Soon)"
+                    disabled
+                    disabledReason="Coming soon"
                 />
                 <ToolButton
                     icon={Icons.RenderIcon}

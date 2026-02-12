@@ -51,6 +51,33 @@ npm run dev
 - `npm run dev` - Start Electron in development mode
 - `npm run build` - Build for production
 - `npm run build:engine` - Rebuild Wasm engine only
+- `npm run dist:win` - Build Windows portable beta artifact
+
+## Beta Build (Windows)
+
+```bash
+npm install
+npm run dist:win
+```
+
+Output is generated in the `release/` directory.
+
+## Beta Scope (v0.1.0-beta.1)
+
+- Drawing canvas with pressure-aware strokes
+- Timeline frame navigation and playback
+- Save/Save As/Load project
+- USD export
+- OTIO export
+- PNG image sequence rendering
+
+## Known Limitations (Beta)
+
+- Video export is not implemented yet
+- OTIO import and round-trip conflict resolution are not implemented
+- Full Data Layer migration is still in progress
+- Advanced audio features (mute buses/effects/scrubbing automation) are not implemented
+- Some toolbar items are intentionally marked as Coming Soon
 
 ## Architecture Documentation
 

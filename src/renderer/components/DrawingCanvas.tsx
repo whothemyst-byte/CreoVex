@@ -83,8 +83,7 @@ const DrawingCanvas: React.FC = () => {
         getCameraAtFrame,
         addCameraKeyframe,
         hasCameraKeyframe,
-        audioTracks,
-        getAudioTracksAtFrame
+        audioTracks
     } = useFrameState();
 
     // Access to get() for checking state in callbacks
@@ -102,8 +101,11 @@ const DrawingCanvas: React.FC = () => {
             const canvas = canvasRef.current;
             if (!canvas) return;
 
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
+            // Keep internal canvas resolution aligned with rendered size to avoid
+            // pointer-to-stroke offset caused by CSS scaling.
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = Math.max(1, Math.round(rect.width));
+            canvas.height = Math.max(1, Math.round(rect.height));
             redrawAll();
         };
 
@@ -116,20 +118,38 @@ const DrawingCanvas: React.FC = () => {
     // Audio playback integration
     useEffect(() => {
         let audioEngine: any = null;
+        let cancelled = false;
 
         const initAudio = async () => {
-            if (isPlaying && audioTracks.length > 0) {
+            if (!isPlaying || audioTracks.length === 0) return;
+
+            try {
+                // Snapshot play start frame to avoid restarting audio every timeline tick.
+                const startFrame = useFrameState.getState().playheadFrame;
+
                 // Dynamically import audio engine
                 const { getAudioEngine } = await import('../audio/audioEngine');
                 audioEngine = getAudioEngine();
                 await audioEngine.initialize();
 
-                // Play all active audio tracks
-                const activeTracks = getAudioTracksAtFrame(playheadFrame);
-                activeTracks.forEach(track => {
-                    const offset = (playheadFrame - track.startFrame) / fps;
+                // Play tracks active at play start
+                const activeTracks = useFrameState.getState().getAudioTracksAtFrame(startFrame);
+                for (const track of activeTracks) {
+                    if (cancelled) return;
+
+                    // Lazy-load track on first playback
+                    if (!audioEngine.isLoaded(track.id)) {
+                        const loaded = await audioEngine.loadAudio(track.id, track.filePath);
+                        if (!loaded) {
+                            continue;
+                        }
+                    }
+
+                    const offset = (startFrame - track.startFrame) / fps;
                     audioEngine.play(track.id, offset, track.volume);
-                });
+                }
+            } catch (error) {
+                console.error('Audio playback initialization failed:', error);
             }
         };
 
@@ -137,11 +157,12 @@ const DrawingCanvas: React.FC = () => {
 
         // Cleanup: stop all audio when playback stops
         return () => {
+            cancelled = true;
             if (audioEngine) {
                 audioEngine.stopAll();
             }
         };
-    }, [isPlaying]);
+    }, [isPlaying, audioTracks, fps]);
 
     // TASK 2: Playback loop using requestAnimationFrame
     useEffect(() => {

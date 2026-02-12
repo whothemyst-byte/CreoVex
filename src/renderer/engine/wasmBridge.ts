@@ -35,7 +35,7 @@ export async function initWasm(): Promise<boolean> {
     try {
         // Load Wasm module from engine/pkg (built by wasm-pack)
         // @ts-expect-error - Wasm module generated at build time
-        const wasm = await import('../../../../engine/pkg/creovox_engine.js');
+        const wasm = await import('../../../engine/pkg/creovox_engine.js');
 
         // Initialize the Wasm module
         await wasm.default();

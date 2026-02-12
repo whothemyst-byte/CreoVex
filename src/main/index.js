@@ -21,6 +21,7 @@ if (!electron || !electron.app) {
 
 const { app, BrowserWindow, ipcMain } = electron;
 const path = require('path');
+const fsSync = require('fs');
 
 let mainWindow = null;
 
@@ -28,13 +29,17 @@ let mainWindow = null;
  * Create the main application window
  */
 function createWindow() {
+    const distPreloadPath = path.join(__dirname, '..', '..', 'dist', 'main', 'preload.js');
+    const srcPreloadPath = path.join(__dirname, 'preload.js');
+    const preloadPath = fsSync.existsSync(distPreloadPath) ? distPreloadPath : srcPreloadPath;
+
     mainWindow = new BrowserWindow({
         width: 1920,
         height: 1080,
         title: 'CreoVox',
         backgroundColor: '#1a1a1a',
         webPreferences: {
-            preload: path.join(__dirname, '..', '..', 'dist', 'main', 'preload.js'),
+            preload: preloadPath,
             contextIsolation: true,
             nodeIntegration: false,
             sandbox: false
@@ -46,11 +51,22 @@ function createWindow() {
         mainWindow.loadURL('http://localhost:5173');
         mainWindow.webContents.openDevTools();
     } else {
-        mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
+        const distRendererIndexPath = path.join(__dirname, '..', '..', 'dist', 'renderer', 'index.html');
+        const defaultRendererIndexPath = path.join(__dirname, '..', 'renderer', 'index.html');
+        const rendererIndexPath = fsSync.existsSync(distRendererIndexPath) ? distRendererIndexPath : defaultRendererIndexPath;
+        mainWindow.loadFile(rendererIndexPath);
     }
 
     mainWindow.on('closed', () => {
         mainWindow = null;
+    });
+
+    mainWindow.webContents.on('render-process-gone', (_event, details) => {
+        console.error('Renderer process gone:', details);
+    });
+
+    mainWindow.webContents.on('unresponsive', () => {
+        console.error('Renderer became unresponsive');
     });
 }
 
@@ -248,10 +264,10 @@ function registerIPCHandlers() {
     });
 
     // Audio operations
-    ipcMain.handle('audio:selectFile', async () => {
+    ipcMain.handle('audio:import', async () => {
         try {
             const { filePaths, canceled } = await dialog.showOpenDialog(mainWindow, {
-                title: 'Select Audio File',
+                title: 'Import Audio',
                 filters: [
                     { name: 'Audio Files', extensions: ['mp3', 'wav', 'ogg', 'm4a', 'flac'] },
                     { name: 'All Files', extensions: ['*'] }
@@ -263,9 +279,28 @@ function registerIPCHandlers() {
                 return { success: false, canceled: true };
             }
 
-            return { success: true, filePath: filePaths[0] };
+            const filePath = filePaths[0];
+            return {
+                success: true,
+                filePath,
+                fileName: path.basename(filePath)
+            };
         } catch (error) {
-            console.error('Audio select failed:', error);
+            console.error('Audio import failed:', error);
+            return { success: false, error: error.message };
+        }
+    });
+
+    ipcMain.handle('audio:readFile', async (_event, filePath) => {
+        try {
+            if (!filePath || typeof filePath !== 'string') {
+                return { success: false, error: 'Invalid file path' };
+            }
+
+            const data = await fs.readFile(filePath);
+            return { success: true, data };
+        } catch (error) {
+            console.error('Audio read failed:', error);
             return { success: false, error: error.message };
         }
     });

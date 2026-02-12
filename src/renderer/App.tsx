@@ -19,7 +19,6 @@ import ToolRail from './components/ToolRail';
 import { useFrameState } from './state/frameState';
 import { useKeyboardShortcuts } from './utils/keyboardShortcuts';
 import './App.css';
-import { getAudioEngine } from './audio/audioEngine';
 import { exportToUSD, validateUSDExport } from './export/usdExporter';
 import { exportToOTIO, validateOTIOExport } from './export/otioExporter';
 import { startAutosave, stopAutosave, updateAutosavePath, triggerAutosave } from './utils/autosave';
@@ -276,33 +275,23 @@ function App() {
             const result = await window.electronAPI.audio.importAudio();
 
             if (result.success && result.filePath) {
-                // Load audio with Web Audio API to get duration
-                const { getAudioEngine } = await import('./audio/audioEngine');
-                const audioEngine = getAudioEngine();
-
-                await audioEngine.initialize();
-
                 const trackId = `audio_${Date.now()}`;
-                const loaded = await audioEngine.loadAudio(trackId, result.filePath);
 
-                if (loaded) {
-                    const durationSeconds = audioEngine.getDuration(trackId);
-                    const durationFrames = Math.ceil(durationSeconds * fps);
+                // Beta-safe path: avoid full renderer decode during import.
+                const metaResult = await window.electronAPI.audio.loadAudio(result.filePath);
+                const durationFrames = Math.max(1, metaResult.durationFrames || Math.ceil(10 * fps));
 
-                    // Create audio track
-                    addAudioTrack({
-                        id: trackId,
-                        filePath: result.filePath,
-                        startFrame: 1,
-                        durationFrames,
-                        volume: 1.0
-                    });
+                // Create audio track
+                addAudioTrack({
+                    id: trackId,
+                    filePath: result.filePath,
+                    startFrame: 1,
+                    durationFrames,
+                    volume: 1.0
+                });
 
-                    setSaveStatus(`Imported: ${result.fileName} (${durationFrames} frames)`);
-                    setTimeout(() => setSaveStatus(''), 3000);
-                } else {
-                    setSaveStatus('Failed to load audio');
-                }
+                setSaveStatus(`Imported: ${result.fileName} (${durationFrames} frames)`);
+                setTimeout(() => setSaveStatus(''), 3000);
             } else if (result.canceled) {
                 setSaveStatus('');
             } else {

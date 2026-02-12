@@ -196,9 +196,14 @@ export const useFrameState = create<FrameState>((set, get) => ({
         get().prevFrame();
     },
 
-    setFrame: (frame: number) => set((state) => ({
-        currentFrame: Math.max(1, Math.min(frame, state.maxFrames))
-    })),
+    setFrame: (frame: number) => set((state) => {
+        const clamped = Math.max(1, Math.min(frame, state.maxFrames));
+        return {
+            currentFrame: clamped,
+            playheadFrame: clamped,
+            isPlaying: false
+        };
+    }),
 
     /**
      * Add a new blank frame at the end
@@ -307,9 +312,10 @@ export const useFrameState = create<FrameState>((set, get) => ({
      * TODO: Audio-synced playback
      * TODO: OTIO-driven playback engine
      */
-    play: () => set({
-        isPlaying: true
-    }),
+    play: () => set((state) => ({
+        isPlaying: true,
+        playheadFrame: state.currentFrame
+    })),
 
     /**
      * Stop playback

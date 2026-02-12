@@ -1,6 +1,6 @@
 {
   "name": "creovox",
-  "version": "0.1.0",
+  "version": "0.1.0-beta.1",
   "description": "Professional Anime Production Suite",
   "main": "src/main/index.js",
   "scripts": {
@@ -11,7 +11,9 @@
     "build:renderer": "vite build",
     "build:main": "tsc -p src/main/tsconfig.json",
     "build:engine": "cd engine && wasm-pack build --target web --out-dir pkg",
-    "start": "electron ."
+    "start": "electron .",
+    "pack": "npm run build && npx electron-builder --dir",
+    "dist:win": "npm run build && npx electron-builder --win portable"
   },
   "keywords": [
     "anime",
@@ -21,6 +23,26 @@
   ],
   "author": "CreoVox Team",
   "license": "UNLICENSED",
+  "build": {
+    "appId": "com.creovox.app",
+    "productName": "CreoVox",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "src/main/index.js",
+      "src/main/preload.js",
+      "src/main/preload.ts",
+      "package.json"
+    ],
+    "win": {
+      "signAndEditExecutable": false,
+      "target": [
+        "portable"
+      ]
+    }
+  },
   "devDependencies": {
     "@types/node": "^20.0.0",
     "@types/react": "^18.2.0",

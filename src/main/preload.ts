@@ -76,6 +76,31 @@ const audioAPI = {
         error?: string;
     }> => {
         return await ipcRenderer.invoke('audio:import');
+    },
+
+    /**
+     * Read audio file as binary data
+     * @param filePath Absolute file path
+     */
+    readFile: async (filePath: string): Promise<{
+        success: boolean;
+        data?: Uint8Array;
+        error?: string;
+    }> => {
+        return await ipcRenderer.invoke('audio:readFile', filePath);
+    },
+
+    /**
+     * Load basic audio metadata
+     * @param filePath Absolute file path
+     */
+    loadAudio: async (filePath: string): Promise<{
+        success: boolean;
+        durationFrames?: number;
+        sampleRate?: number;
+        error?: string;
+    }> => {
+        return await ipcRenderer.invoke('audio:loadAudio', filePath);
     }
 };
 

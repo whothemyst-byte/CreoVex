@@ -51,7 +51,9 @@ npm run dev
 - `npm run dev` - Start Electron in development mode
 - `npm run build` - Build for production
 - `npm run build:engine` - Rebuild Wasm engine only
-- `npm run dist:win` - Build Windows portable beta artifact
+- `npm run dist:win` - Build Windows portable artifact
+- `npm run website:dev` - Run download website locally
+- `npm run website:build` - Build website for deployment
 
 ## Beta Build (Windows)
 
@@ -61,6 +63,29 @@ npm run dist:win
 ```
 
 Output is generated in the `release/` directory.
+
+## Download Website (Vite + Vercel)
+
+The public website lives under `website/` and includes:
+- Landing page
+- Download page (GitHub Releases asset link + checksum)
+- Changelog page
+
+Local workflow:
+
+```bash
+npm --prefix website install
+npm run website:dev
+```
+
+Production build output:
+
+```bash
+npm run website:build
+```
+
+Update release metadata for website in:
+- `website/src/release-data.js`
 
 ## Beta Scope (v0.1.0-beta.1)
 

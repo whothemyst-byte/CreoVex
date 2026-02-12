@@ -189,6 +189,36 @@ const exportAPI = {
 };
 
 /**
+ * Autosave and recovery API
+ */
+const autosaveAPI = {
+    check: async (): Promise<{
+        found: boolean;
+        autosavePath?: string;
+        modifiedAt?: string;
+        size?: number;
+    }> => {
+        return await ipcRenderer.invoke('autosave:check');
+    },
+
+    restore: async (autosavePath: string): Promise<{
+        success: boolean;
+        data?: string;
+        filePath?: string;
+        error?: string;
+    }> => {
+        return await ipcRenderer.invoke('autosave:restore', autosavePath);
+    },
+
+    discard: async (autosavePath: string): Promise<{
+        success: boolean;
+        error?: string;
+    }> => {
+        return await ipcRenderer.invoke('autosave:discard', autosavePath);
+    }
+};
+
+/**
  * Menu event listeners API
  * 
  * Allows renderer to listen for menu commands from main process
@@ -249,6 +279,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     audio: audioAPI,
     render: renderAPI,
     export: exportAPI,
+    autosave: autosaveAPI,
     menu: menuAPI
 });
 
@@ -260,6 +291,7 @@ declare global {
             audio: typeof audioAPI;
             render: typeof renderAPI;
             export: typeof exportAPI;
+            autosave: typeof autosaveAPI;
             menu: typeof menuAPI;
         };
     }

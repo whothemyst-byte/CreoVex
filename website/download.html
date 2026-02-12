@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Download CreoVox</title>
+    <link rel="stylesheet" href="/src/site.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/">CreoVox</a>
+      <nav class="nav">
+        <a href="/download.html" aria-current="page">Download</a>
+        <a href="/changelog.html">Changelog</a>
+      </nav>
+    </header>
+
+    <main class="page">
+      <section class="card">
+        <h1>Download CreoVox</h1>
+        <p class="lead">Install the latest Windows release from GitHub Releases.</p>
+
+        <dl class="details">
+          <div>
+            <dt>Latest Version</dt>
+            <dd id="version-value">-</dd>
+          </div>
+          <div>
+            <dt>Installer</dt>
+            <dd id="asset-name">-</dd>
+          </div>
+          <div>
+            <dt>Checksum (SHA256)</dt>
+            <dd class="checksum-wrap">
+              <code id="checksum">-</code>
+              <button class="btn tiny" id="copy-checksum">Copy</button>
+            </dd>
+          </div>
+          <div>
+            <dt>Published</dt>
+            <dd id="published-at">-</dd>
+          </div>
+        </dl>
+
+        <div class="cta-row">
+          <a class="btn primary" id="download-link" href="#">Download .exe</a>
+          <a class="btn ghost" id="release-page-link" href="#" target="_blank" rel="noreferrer">Release Page</a>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>System Requirements</h2>
+        <ul>
+          <li>Windows 10/11 (64-bit)</li>
+          <li>8 GB RAM minimum (16 GB recommended)</li>
+          <li>1 GB free disk space</li>
+        </ul>
+      </section>
+    </main>
+
+    <script type="module" src="/src/download.js"></script>
+  </body>
+</html>

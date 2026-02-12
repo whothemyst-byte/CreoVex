@@ -29,6 +29,7 @@ import { ScenePanel } from './components/ScenePanel';
 import { ShotPanel } from './components/ShotPanel';
 import { WarningToast } from './components/WarningToast';
 import { StoryboardTools } from './components/StoryboardTools';
+import { RecoveryDialog } from './components/RecoveryDialog';
 import { Stage, useNarrativeState } from '../data/narrative';
 
 function App() {
@@ -47,6 +48,7 @@ function App() {
     const [projectPath, setProjectPath] = useState<string | undefined>(undefined);
     const [isDirty, setIsDirty] = useState<boolean>(false);
     const [warning, setWarning] = useState<string | null>(null);
+    const [recoveryInfo, setRecoveryInfo] = useState<{ path: string; modifiedAt: Date } | null>(null);
 
     // Enable keyboard shortcuts globally
     useKeyboardShortcuts();
@@ -117,6 +119,27 @@ function App() {
     useEffect(() => {
         updateAutosavePath(projectPath);
     }, [projectPath]);
+
+    // Check for recoverable autosave at startup.
+    useEffect(() => {
+        const checkRecovery = async () => {
+            if (!window.electronAPI?.autosave) return;
+
+            try {
+                const result = await window.electronAPI.autosave.check();
+                if (result.found && result.autosavePath) {
+                    setRecoveryInfo({
+                        path: result.autosavePath,
+                        modifiedAt: result.modifiedAt ? new Date(result.modifiedAt) : new Date()
+                    });
+                }
+            } catch (error) {
+                logger.error('Autosave recovery check failed', { error });
+            }
+        };
+
+        checkRecovery();
+    }, []);
 
     // Block window close if there are unsaved changes
     useEffect(() => {
@@ -440,6 +463,42 @@ function App() {
         }
     };
 
+    const handleRestoreRecovery = async () => {
+        if (!recoveryInfo || !window.electronAPI?.autosave) return;
+
+        try {
+            const result = await window.electronAPI.autosave.restore(recoveryInfo.path);
+            if (result.success && result.data) {
+                clearProject();
+                deserializeProject(JSON.parse(result.data));
+                setSaveStatus(`Recovered autosave: ${recoveryInfo.path}`);
+                setTimeout(() => setSaveStatus(''), 4000);
+            } else {
+                setSaveStatus(`Recovery failed: ${result.error || 'Unknown error'}`);
+            }
+        } catch (error) {
+            const userMessage = getReadableError(error);
+            setSaveStatus(`Recovery failed: ${userMessage}`);
+        } finally {
+            setRecoveryInfo(null);
+        }
+    };
+
+    const handleDiscardRecovery = async () => {
+        if (!recoveryInfo || !window.electronAPI?.autosave) {
+            setRecoveryInfo(null);
+            return;
+        }
+
+        try {
+            await window.electronAPI.autosave.discard(recoveryInfo.path);
+        } catch (error) {
+            logger.warn('Failed to discard autosave', { error, path: recoveryInfo.path });
+        } finally {
+            setRecoveryInfo(null);
+        }
+    };
+
     return (
         <div className="app-layout">
             {/* Unified Header Bar */}
@@ -493,6 +552,16 @@ function App() {
                 <WarningToast
                     message={warning}
                     onDismiss={() => setWarning(null)}
+                />
+            )}
+
+            {/* Recovery Dialog */}
+            {recoveryInfo && (
+                <RecoveryDialog
+                    autosavePath={recoveryInfo.path}
+                    autosaveTime={recoveryInfo.modifiedAt}
+                    onRestore={handleRestoreRecovery}
+                    onDiscard={handleDiscardRecovery}
                 />
             )}
 

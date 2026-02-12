@@ -54,6 +54,18 @@ const exportAPI = {
     }
 };
 
+const autosaveAPI = {
+    check: async () => {
+        return await ipcRenderer.invoke('autosave:check');
+    },
+    restore: async (autosavePath) => {
+        return await ipcRenderer.invoke('autosave:restore', autosavePath);
+    },
+    discard: async (autosavePath) => {
+        return await ipcRenderer.invoke('autosave:discard', autosavePath);
+    }
+};
+
 const menuAPI = {
     onSave: (callback) => {
         ipcRenderer.on('menu:save', callback);
@@ -86,5 +98,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     audio: audioAPI,
     render: renderAPI,
     export: exportAPI,
+    autosave: autosaveAPI,
     menu: menuAPI
 });

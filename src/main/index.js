@@ -22,8 +22,30 @@ if (!electron || !electron.app) {
 const { app, BrowserWindow, ipcMain } = electron;
 const path = require('path');
 const fsSync = require('fs');
+const fsPromises = require('fs').promises;
 
 let mainWindow = null;
+const MAX_LOG_FILE_SIZE_BYTES = 2 * 1024 * 1024;
+
+async function appendMainLog(level, message, data) {
+    try {
+        const logsDir = path.join(app.getPath('userData'), 'logs');
+        const logPath = path.join(logsDir, 'main.log');
+        await fsPromises.mkdir(logsDir, { recursive: true });
+
+        const line = `${new Date().toISOString()} [${level}] ${message}${data ? ` ${JSON.stringify(data)}` : ''}\n`;
+        await fsPromises.appendFile(logPath, line, 'utf-8');
+
+        const stats = await fsPromises.stat(logPath);
+        if (stats.size > MAX_LOG_FILE_SIZE_BYTES) {
+            const rotatedPath = path.join(logsDir, 'main.log.1');
+            await fsPromises.copyFile(logPath, rotatedPath);
+            await fsPromises.writeFile(logPath, '', 'utf-8');
+        }
+    } catch {
+        // Never throw from logging path.
+    }
+}
 
 /**
  * Create the main application window
@@ -63,10 +85,12 @@ function createWindow() {
 
     mainWindow.webContents.on('render-process-gone', (_event, details) => {
         console.error('Renderer process gone:', details);
+        void appendMainLog('ERROR', 'Renderer process gone', details);
     });
 
     mainWindow.webContents.on('unresponsive', () => {
         console.error('Renderer became unresponsive');
+        void appendMainLog('ERROR', 'Renderer became unresponsive');
     });
 }
 
@@ -433,10 +457,52 @@ function registerIPCHandlers() {
     // Check for autosave files on app start
     ipcMain.handle('autosave:check', async () => {
         try {
-            // TODO: Implement full autosave detection logic
-            return { found: false };
+            const os = require('os');
+            const candidateDirs = [process.cwd(), os.tmpdir()];
+            const candidates = [];
+
+            for (const dir of candidateDirs) {
+                let entries = [];
+                try {
+                    entries = await fsPromises.readdir(dir, { withFileTypes: true });
+                } catch {
+                    continue;
+                }
+
+                for (const entry of entries) {
+                    if (!entry.isFile()) continue;
+                    if (!entry.name.endsWith('.autosave')) continue;
+
+                    const fullPath = path.join(dir, entry.name);
+                    try {
+                        const stats = await fsPromises.stat(fullPath);
+                        candidates.push({
+                            path: fullPath,
+                            modifiedAt: stats.mtime.toISOString(),
+                            size: stats.size,
+                            mtimeMs: stats.mtimeMs
+                        });
+                    } catch {
+                        // Ignore unreadable files.
+                    }
+                }
+            }
+
+            if (candidates.length === 0) {
+                return { found: false };
+            }
+
+            candidates.sort((a, b) => b.mtimeMs - a.mtimeMs);
+            const latest = candidates[0];
+            return {
+                found: true,
+                autosavePath: latest.path,
+                modifiedAt: latest.modifiedAt,
+                size: latest.size
+            };
         } catch (error) {
             console.error('Autosave check failed:', error);
+            void appendMainLog('ERROR', 'Autosave check failed', { error: error?.message || String(error) });
             return { found: false };
         }
     });
@@ -448,6 +514,7 @@ function registerIPCHandlers() {
             return { success: true, data, filePath: autosavePath };
         } catch (error) {
             console.error('Autosave restore failed:', error);
+            void appendMainLog('ERROR', 'Autosave restore failed', { error: error?.message || String(error) });
             return { success: false, error: error.message };
         }
     });
@@ -459,6 +526,7 @@ function registerIPCHandlers() {
             return { success: true };
         } catch (error) {
             console.error('Autosave discard failed:', error);
+            void appendMainLog('ERROR', 'Autosave discard failed', { error: error?.message || String(error) });
             return { success: false, error: error.message };
         }
     });
@@ -477,6 +545,7 @@ function registerIPCHandlers() {
 
 // Application lifecycle
 app.whenReady().then(() => {
+    void appendMainLog('INFO', 'App startup', { version: app.getVersion(), platform: process.platform });
     registerIPCHandlers();
     createWindow();
     createMenu(); // Add File menu
@@ -492,4 +561,14 @@ app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {
         app.quit();
     }
+});
+
+process.on('uncaughtException', (error) => {
+    console.error('Uncaught exception in main process:', error);
+    void appendMainLog('ERROR', 'Uncaught exception', { message: error.message, stack: error.stack });
+});
+
+process.on('unhandledRejection', (reason) => {
+    console.error('Unhandled rejection in main process:', reason);
+    void appendMainLog('ERROR', 'Unhandled rejection', { reason: String(reason) });
 });

@@ -13,7 +13,10 @@
     "build:engine": "cd engine && wasm-pack build --target web --out-dir pkg",
     "start": "electron .",
     "pack": "npm run build && npx electron-builder --dir",
-    "dist:win": "npm run build && npx electron-builder --win portable"
+    "dist:win": "npm run build && npx electron-builder --win portable",
+    "website:dev": "npm --prefix website run dev",
+    "website:build": "npm --prefix website run build",
+    "website:preview": "npm --prefix website run preview"
   },
   "keywords": [
     "anime",
